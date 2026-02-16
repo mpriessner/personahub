@@ -10,7 +10,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   version: 1,
-  include: ['*.md', '*.yaml', '*.yml', '*.json', '*.txt'],
+  include: ['**/*.md', '**/*.yaml', '**/*.yml', '**/*.json', '**/*.txt'],
   exclude: [
     '.personahub/**',
     'node_modules/**',

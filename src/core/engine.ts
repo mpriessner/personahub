@@ -89,6 +89,19 @@ export class PersonaHubEngine {
     // Generate snapshot hash from file hashes
     const combinedHash = this.generateSnapshotHash(files);
     
+    // Check if snapshot with same hash already exists
+    const existing = db.getSnapshotByHash(combinedHash);
+    if (existing) {
+      // For backups during restore, reuse existing snapshot
+      return {
+        id: existing.id,
+        hash: existing.hash,
+        message: existing.message || options.message,
+        fileCount: existing.file_count,
+        totalSize: existing.total_size
+      };
+    }
+    
     // Create snapshot directory with path validation
     const snapshotDir = validatePath(
       path.join(this.personahubDir, 'snapshots'),

@@ -30,8 +30,8 @@ describe('Config', () => {
     });
 
     test('includes common persona patterns', () => {
-      expect(DEFAULT_CONFIG.include).toContain('*.md');
-      expect(DEFAULT_CONFIG.include).toContain('*.yaml');
+      expect(DEFAULT_CONFIG.include).toContain('**/*.md');
+      expect(DEFAULT_CONFIG.include).toContain('**/*.yaml');
     });
 
     test('excludes .personahub', () => {
