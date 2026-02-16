@@ -366,4 +366,66 @@ export class PersonaHubEngine {
       restoredFiles: snapshotFiles.length
     };
   }
+
+  async cleanup(): Promise<{ deleted: number; kept: number }> {
+    this.ensureInitialized();
+    const db = await this.getDb();
+    const config = this.getConfig();
+    
+    const retention = config.retention || {
+      autoSnapshotDays: 7,
+      manualSnapshotDays: 30,
+      minSnapshots: 5
+    };
+    
+    const snapshots = db.getSnapshots();
+    const now = Date.now();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    
+    // Always keep minSnapshots
+    if (snapshots.length <= retention.minSnapshots) {
+      return { deleted: 0, kept: snapshots.length };
+    }
+    
+    const toDelete: number[] = [];
+    
+    // Check each snapshot (except the most recent minSnapshots)
+    for (let i = retention.minSnapshots; i < snapshots.length; i++) {
+      const snap = snapshots[i];
+      const createdAt = new Date(snap.created_at).getTime();
+      const ageInDays = (now - createdAt) / msPerDay;
+      
+      const maxAge = snap.is_auto === 1
+        ? retention.autoSnapshotDays 
+        : retention.manualSnapshotDays;
+      
+      // Don't delete restore backups within retention period
+      if (snap.is_restore_backup === 1) {
+        continue;
+      }
+      
+      if (ageInDays > maxAge) {
+        toDelete.push(snap.id);
+      }
+    }
+    
+    // Delete snapshots and their files
+    for (const id of toDelete) {
+      const snap = db.getSnapshotById(id);
+      if (snap) {
+        // Delete snapshot files
+        const snapshotDir = path.join(this.personahubDir, 'snapshots', snap.hash);
+        if (fs.existsSync(snapshotDir)) {
+          fs.rmSync(snapshotDir, { recursive: true, force: true });
+        }
+        // Delete from database
+        db.deleteSnapshot(id);
+      }
+    }
+    
+    return { 
+      deleted: toDelete.length, 
+      kept: snapshots.length - toDelete.length 
+    };
+  }
 }

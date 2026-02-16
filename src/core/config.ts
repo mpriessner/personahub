@@ -1,11 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface RetentionConfig {
+  autoSnapshotDays: number;    // Days to keep auto snapshots
+  manualSnapshotDays: number;  // Days to keep manual snapshots
+  minSnapshots: number;        // Always keep at least this many
+}
+
 export interface Config {
   version: number;
   include: string[];
   exclude: string[];
   snapshotDir: string;
+  retention?: RetentionConfig;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -23,7 +30,12 @@ export const DEFAULT_CONFIG: Config = {
     'package-lock.json',
     'yarn.lock'
   ],
-  snapshotDir: '.personahub/snapshots'
+  snapshotDir: '.personahub/snapshots',
+  retention: {
+    autoSnapshotDays: 7,     // Keep auto snapshots for 1 week
+    manualSnapshotDays: 30,  // Keep manual snapshots for 1 month
+    minSnapshots: 5          // Always keep at least 5
+  }
 };
 
 export function loadConfig(configPath: string): Config {

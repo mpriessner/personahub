@@ -8,6 +8,7 @@ import { listCommand } from './commands/list';
 import { diffCommand } from './commands/diff';
 import { restoreCommand } from './commands/restore';
 import { serveCommand } from './commands/serve';
+import { cleanupCommand } from './commands/cleanup';
 
 const program = new Command();
 
@@ -23,6 +24,7 @@ listCommand(program);
 diffCommand(program);
 restoreCommand(program);
 serveCommand(program);
+cleanupCommand(program);
 
 // Handle unknown commands
 program.on('command:*', () => {

@@ -10,6 +10,7 @@ export function saveCommand(program: Command): void {
     .option('-a, --auto', 'Auto-generated message (for cron)')
     .option('-q, --quiet', 'Suppress output')
     .option('--skip-unchanged', 'Skip if no changes detected')
+    .option('--cleanup', 'Run cleanup after saving')
     .action(async (message, options) => {
       try {
         const engine = new PersonaHubEngine(process.cwd());
@@ -50,6 +51,14 @@ export function saveCommand(program: Command): void {
           const sizeStr = formatSize(result.totalSize);
           console.log(chalk.green(`✓ Snapshot created: #${result.id} - ${snapshotMessage}`));
           console.log(chalk.dim(`  ${result.fileCount} files, ${sizeStr}`));
+        }
+
+        // Run cleanup if requested
+        if (options.cleanup) {
+          const cleanupResult = await engine.cleanup();
+          if (!options.quiet && cleanupResult.deleted > 0) {
+            console.log(chalk.dim(`  Cleaned up ${cleanupResult.deleted} old snapshots`));
+          }
         }
 
       } catch (error: any) {
