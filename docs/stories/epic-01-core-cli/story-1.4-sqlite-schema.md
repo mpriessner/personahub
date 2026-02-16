@@ -401,3 +401,9 @@ describe('DatabaseManager', () => {
 - Enable foreign keys for cascade delete
 - Use transactions for bulk inserts
 - All operations are synchronous (no async/await needed)
+- **⚠️ Add `PRAGMA integrity_check` on database open** (health check)
+- Consider adding a `personahub doctor` command for diagnostics
+
+## Review Fixes Applied
+- ✅ Add integrity check on startup
+- ✅ Document network drive limitations

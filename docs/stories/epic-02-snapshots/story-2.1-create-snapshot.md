@@ -322,7 +322,19 @@ ls .personahub/snapshots/
 ## Notes for Implementing Agent
 
 - Copy files preserving directory structure
-- Hash is 12-char truncated SHA-256
+- **⚠️ Hash is 16-char truncated SHA-256** (not 12)
 - Use transactions for database inserts
 - Handle large files gracefully
 - Exit code 0 on success, 1 on error
+- **⚠️ SECURITY: Validate all file paths before copying:**
+```typescript
+const destPath = path.resolve(snapshotDir, file.relativePath);
+if (!destPath.startsWith(path.resolve(snapshotDir) + path.sep)) {
+  throw new Error('Invalid file path detected (path traversal attempt)');
+}
+```
+
+## Review Fixes Applied
+- ✅ Hash length 12 → 16 chars
+- ✅ Path traversal security validation
+- ✅ Input validation for snapshot message

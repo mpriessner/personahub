@@ -106,7 +106,7 @@ personahub/
   },
   "dependencies": {
     "better-sqlite3": "^9.4.0",
-    "chalk": "^5.3.0",
+    "chalk": "^4.1.2",
     "commander": "^12.0.0",
     "glob": "^10.3.0"
   },
@@ -207,6 +207,9 @@ None required - this is setup only. Tests come in Story 1.6.
 ## Notes for Implementing Agent
 
 - Use Commander.js v12+ (ESM-compatible but we use CommonJS)
-- chalk v5 is ESM-only, use dynamic import or chalk v4
+- **⚠️ CRITICAL: Use chalk@4.1.2** (NOT v5!) - v5 is ESM-only and breaks CommonJS
 - The CLI entry point needs `#!/usr/bin/env node` shebang
 - After build, dist/cli.js must be executable
+
+## Review Fixes Applied
+- ✅ Chalk v5 → v4.1.2 (ESM/CommonJS compatibility)

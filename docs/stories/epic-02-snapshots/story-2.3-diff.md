@@ -240,4 +240,10 @@ private generateDiff(oldContent: string, newContent: string): string {
 - [ ] `--stat` shows summary only
 - [ ] Colored output
 - [ ] Error handling for invalid IDs
+- [ ] **Input validation for snapshot IDs**
 - [ ] Code committed to git
+
+## Review Fixes Applied
+- ✅ Input validation: Check `isNaN(snapshotId)` and `snapshotId < 1`
+- ✅ Use `diff` package (jsdiff) instead of custom implementation
+- ✅ Handle binary files: Show "Binary file differs" instead of line diff

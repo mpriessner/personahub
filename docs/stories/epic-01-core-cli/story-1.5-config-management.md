@@ -306,6 +306,11 @@ personahub save
 ## Notes for Implementing Agent
 
 - Use glob package with ignore option
-- Hash files with SHA-256, truncate to 12 chars for readability
+- **⚠️ Hash files with SHA-256, truncate to 16 chars** (not 12 - safer against collisions)
 - Sort files for deterministic snapshots
 - Always force-exclude .personahub to prevent recursion
+- **⚠️ Add path traversal validation** - ensure resolved paths stay within workspace
+
+## Review Fixes Applied
+- ✅ Hash length 12 → 16 chars (collision safety)
+- ✅ Path traversal security check
