@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🕐 PersonaHub Time Machine</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>🕐 PersonaHub Time Machine</h1>
+      <p class="subtitle">Visual version control for AI personas</p>
+    </header>
+    
+    <main>
+      <section id="timeline">
+        <h2>📜 Snapshot Timeline</h2>
+        <div id="snapshot-list" class="loading">
+          <div class="spinner"></div>
+          <p>Loading snapshots...</p>
+        </div>
+      </section>
+      
+      <section id="details" class="hidden">
+        <h2>📋 Snapshot Details</h2>
+        <div id="snapshot-details"></div>
+      </section>
+      
+      <section id="diff-view" class="hidden">
+        <h2>📊 Changes</h2>
+        <div id="diff-content"></div>
+      </section>
+    </main>
+    
+    <div id="toast" class="hidden"></div>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>
