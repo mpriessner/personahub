@@ -160,7 +160,7 @@ export class DatabaseManager {
   }
 
   getSnapshots(limit?: number): SnapshotRow[] {
-    let sql = 'SELECT * FROM snapshots ORDER BY created_at DESC';
+    let sql = 'SELECT * FROM snapshots ORDER BY created_at DESC, id DESC';
     if (limit) {
       sql += ` LIMIT ${limit}`;
     }
@@ -186,7 +186,7 @@ export class DatabaseManager {
   }
 
   getLatestSnapshot(): SnapshotRow | undefined {
-    const result = this.db.exec('SELECT * FROM snapshots ORDER BY created_at DESC LIMIT 1');
+    const result = this.db.exec('SELECT * FROM snapshots ORDER BY created_at DESC, id DESC LIMIT 1');
     const rows = this.rowsToObjects<SnapshotRow>(result);
     return rows[0];
   }
