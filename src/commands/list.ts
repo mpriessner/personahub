@@ -9,13 +9,13 @@ export function listCommand(program: Command): void {
     .alias('ls')
     .description('Show snapshot timeline')
     .option('-l, --limit <n>', 'Limit number of snapshots', '20')
-    .action((options) => {
+    .action(async (options) => {
       try {
         const engine = new PersonaHubEngine(process.cwd());
         engine.ensureInitialized();
 
         const limit = parseInt(options.limit, 10);
-        const snapshots = engine.listSnapshots(limit);
+        const snapshots = await engine.listSnapshots(limit);
 
         if (snapshots.length === 0) {
           console.log(chalk.yellow("No snapshots yet."));

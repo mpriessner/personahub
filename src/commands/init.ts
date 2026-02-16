@@ -9,7 +9,7 @@ export function initCommand(program: Command): void {
     .command('init')
     .description('Initialize PersonaHub in current directory')
     .option('-f, --force', 'Force re-initialization')
-    .action((options) => {
+    .action(async (options) => {
       try {
         const cwd = process.cwd();
         const personahubDir = path.join(cwd, '.personahub');
@@ -31,7 +31,7 @@ export function initCommand(program: Command): void {
         
         // Initialize
         const engine = new PersonaHubEngine(cwd);
-        const result = engine.init();
+        const result = await engine.init();
         
         console.log(chalk.green('✓ PersonaHub initialized'));
         console.log(`  Found ${chalk.cyan(result.fileCount.toString())} files matching patterns`);

@@ -1,4 +1,6 @@
-import Database from 'better-sqlite3';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface SnapshotRow {
   id: number;
@@ -35,14 +37,32 @@ export interface FileInsert {
 }
 
 export class DatabaseManager {
-  private db: Database.Database;
+  private db!: SqlJsDatabase;
+  private dbPath: string;
+  private initialized: Promise<void>;
 
   constructor(dbPath: string) {
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('foreign_keys = ON');
+    this.dbPath = dbPath;
+    this.initialized = this.init();
+  }
+
+  private async init(): Promise<void> {
+    const SQL = await initSqlJs();
+    
+    // Load existing database or create new
+    if (fs.existsSync(this.dbPath)) {
+      const buffer = fs.readFileSync(this.dbPath);
+      this.db = new SQL.Database(buffer);
+    } else {
+      this.db = new SQL.Database();
+    }
+    
     this.migrate();
     this.integrityCheck();
+  }
+
+  async ready(): Promise<void> {
+    await this.initialized;
   }
 
   private migrate(): void {
@@ -77,52 +97,66 @@ export class DatabaseManager {
         ON snapshots(hash);
     `;
     
-    this.db.exec(schema);
+    this.db.run(schema);
+    this.save(); // Save after migration
   }
 
   private integrityCheck(): void {
-    const result = this.db.pragma('integrity_check') as { integrity_check: string }[];
-    if (result[0]?.integrity_check !== 'ok') {
+    const result = this.db.exec('PRAGMA integrity_check');
+    if (result.length > 0 && result[0].values[0][0] !== 'ok') {
       throw new Error('Database integrity check failed');
     }
   }
 
+  private save(): void {
+    const data = this.db.export();
+    const buffer = Buffer.from(data);
+    const dir = path.dirname(this.dbPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(this.dbPath, buffer);
+  }
+
   insertSnapshot(data: SnapshotInsert): number {
-    const stmt = this.db.prepare(`
+    this.db.run(`
       INSERT INTO snapshots (hash, message, file_count, total_size, is_auto, is_restore_backup)
-      VALUES (@hash, @message, @file_count, @total_size, @is_auto, @is_restore_backup)
-    `);
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      data.hash,
+      data.message,
+      data.file_count,
+      data.total_size,
+      data.is_auto ? 1 : 0,
+      data.is_restore_backup ? 1 : 0
+    ]);
     
-    const result = stmt.run({
-      hash: data.hash,
-      message: data.message,
-      file_count: data.file_count,
-      total_size: data.total_size,
-      is_auto: data.is_auto ? 1 : 0,
-      is_restore_backup: data.is_restore_backup ? 1 : 0
-    });
-    
-    return result.lastInsertRowid as number;
+    const result = this.db.exec('SELECT last_insert_rowid() as id');
+    const id = result[0].values[0][0] as number;
+    this.save();
+    return id;
   }
 
   insertFiles(snapshotId: number, files: FileInsert[]): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO snapshot_files (snapshot_id, path, hash, size)
-      VALUES (@snapshot_id, @path, @hash, @size)
-    `);
-    
-    const insertMany = this.db.transaction((files: FileInsert[]) => {
-      for (const file of files) {
-        stmt.run({
-          snapshot_id: snapshotId,
-          path: file.path,
-          hash: file.hash,
-          size: file.size
-        });
-      }
+    for (const file of files) {
+      this.db.run(`
+        INSERT INTO snapshot_files (snapshot_id, path, hash, size)
+        VALUES (?, ?, ?, ?)
+      `, [snapshotId, file.path, file.hash, file.size]);
+    }
+    this.save();
+  }
+
+  private rowsToObjects<T>(result: any[]): T[] {
+    if (result.length === 0) return [];
+    const columns = result[0].columns;
+    return result[0].values.map((row: any[]) => {
+      const obj: any = {};
+      columns.forEach((col: string, i: number) => {
+        obj[col] = row[i];
+      });
+      return obj as T;
     });
-    
-    insertMany(files);
   }
 
   getSnapshots(limit?: number): SnapshotRow[] {
@@ -130,45 +164,46 @@ export class DatabaseManager {
     if (limit) {
       sql += ` LIMIT ${limit}`;
     }
-    return this.db.prepare(sql).all() as SnapshotRow[];
+    const result = this.db.exec(sql);
+    return this.rowsToObjects<SnapshotRow>(result);
   }
 
   getSnapshotById(id: number): SnapshotRow | undefined {
-    return this.db.prepare(
-      'SELECT * FROM snapshots WHERE id = ?'
-    ).get(id) as SnapshotRow | undefined;
+    const result = this.db.exec('SELECT * FROM snapshots WHERE id = ?', [id]);
+    const rows = this.rowsToObjects<SnapshotRow>(result);
+    return rows[0];
   }
 
   getSnapshotByHash(hash: string): SnapshotRow | undefined {
-    return this.db.prepare(
-      'SELECT * FROM snapshots WHERE hash = ?'
-    ).get(hash) as SnapshotRow | undefined;
+    const result = this.db.exec('SELECT * FROM snapshots WHERE hash = ?', [hash]);
+    const rows = this.rowsToObjects<SnapshotRow>(result);
+    return rows[0];
   }
 
   getFilesForSnapshot(snapshotId: number): SnapshotFileRow[] {
-    return this.db.prepare(
-      'SELECT * FROM snapshot_files WHERE snapshot_id = ?'
-    ).all(snapshotId) as SnapshotFileRow[];
+    const result = this.db.exec('SELECT * FROM snapshot_files WHERE snapshot_id = ?', [snapshotId]);
+    return this.rowsToObjects<SnapshotFileRow>(result);
   }
 
   getLatestSnapshot(): SnapshotRow | undefined {
-    return this.db.prepare(
-      'SELECT * FROM snapshots ORDER BY created_at DESC LIMIT 1'
-    ).get() as SnapshotRow | undefined;
+    const result = this.db.exec('SELECT * FROM snapshots ORDER BY created_at DESC LIMIT 1');
+    const rows = this.rowsToObjects<SnapshotRow>(result);
+    return rows[0];
   }
 
   deleteSnapshot(id: number): void {
-    this.db.prepare('DELETE FROM snapshots WHERE id = ?').run(id);
+    this.db.run('DELETE FROM snapshots WHERE id = ?', [id]);
+    this.save();
   }
 
   getSnapshotCount(): number {
-    const result = this.db.prepare(
-      'SELECT COUNT(*) as count FROM snapshots'
-    ).get() as { count: number };
-    return result.count;
+    const result = this.db.exec('SELECT COUNT(*) as count FROM snapshots');
+    if (result.length === 0) return 0;
+    return result[0].values[0][0] as number;
   }
 
   close(): void {
+    this.save();
     this.db.close();
   }
 }

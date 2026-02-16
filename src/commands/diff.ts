@@ -7,7 +7,7 @@ export function diffCommand(program: Command): void {
     .command('diff <id> [id2]')
     .description('Compare versions')
     .option('-s, --stat', 'Show summary only')
-    .action((id, id2, options) => {
+    .action(async (id, id2, options) => {
       try {
         const engine = new PersonaHubEngine(process.cwd());
         engine.ensureInitialized();
@@ -22,7 +22,7 @@ export function diffCommand(program: Command): void {
           throw new Error('Invalid comparison snapshot ID');
         }
 
-        const result = engine.diff(snapshotId, compareToId);
+        const result = await engine.diff(snapshotId, compareToId);
 
         // Header
         if (compareToId) {

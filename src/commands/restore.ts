@@ -19,7 +19,7 @@ export function restoreCommand(program: Command): void {
         }
         
         // Preview
-        const preview = engine.getRestorePreview(snapshotId);
+        const preview = await engine.getRestorePreview(snapshotId);
         
         console.log(chalk.bold(`\nRestore to snapshot #${snapshotId}?\n`));
         console.log(`This will:`);
@@ -44,7 +44,7 @@ export function restoreCommand(program: Command): void {
         }
 
         // Execute restore
-        const result = engine.restore(snapshotId);
+        const result = await engine.restore(snapshotId);
 
         console.log(chalk.green(`\n✓ Restored to snapshot #${snapshotId}`));
         console.log(chalk.dim(`  Backup created: #${result.backupId}`));

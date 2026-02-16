@@ -10,7 +10,7 @@ export function saveCommand(program: Command): void {
     .option('-a, --auto', 'Auto-generated message (for cron)')
     .option('-q, --quiet', 'Suppress output')
     .option('--skip-unchanged', 'Skip if no changes detected')
-    .action((message, options) => {
+    .action(async (message, options) => {
       try {
         const engine = new PersonaHubEngine(process.cwd());
         engine.ensureInitialized();
@@ -31,7 +31,7 @@ export function saveCommand(program: Command): void {
 
         // Check for changes if requested
         if (options.skipUnchanged) {
-          const hasChanges = engine.hasChanges();
+          const hasChanges = await engine.hasChanges();
           if (!hasChanges) {
             if (!options.quiet) {
               console.log(chalk.yellow('No changes detected, skipping snapshot'));
@@ -41,7 +41,7 @@ export function saveCommand(program: Command): void {
         }
 
         // Create snapshot
-        const result = engine.createSnapshot({
+        const result = await engine.createSnapshot({
           message: snapshotMessage,
           isAuto: options.auto || false
         });

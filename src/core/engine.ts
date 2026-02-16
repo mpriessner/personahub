@@ -37,7 +37,7 @@ export class PersonaHubEngine {
     }
   }
 
-  init(): { fileCount: number } {
+  async init(): Promise<{ fileCount: number }> {
     // Create directories
     fs.mkdirSync(this.personahubDir, { recursive: true });
     fs.mkdirSync(path.join(this.personahubDir, 'snapshots'), { recursive: true });
@@ -50,6 +50,7 @@ export class PersonaHubEngine {
     // Initialize database
     const dbPath = path.join(this.personahubDir, 'history.db');
     this.db = new DatabaseManager(dbPath);
+    await this.db.ready();
     
     // Count tracked files
     const trackedFiles = getTrackedFiles(this.workDir, this.config);
@@ -57,10 +58,11 @@ export class PersonaHubEngine {
     return { fileCount: trackedFiles.length };
   }
 
-  private getDb(): DatabaseManager {
+  private async getDb(): Promise<DatabaseManager> {
     if (!this.db) {
       const dbPath = path.join(this.personahubDir, 'history.db');
       this.db = new DatabaseManager(dbPath);
+      await this.db.ready();
     }
     return this.db;
   }
@@ -72,11 +74,11 @@ export class PersonaHubEngine {
     return this.config;
   }
 
-  createSnapshot(options: CreateSnapshotOptions): CreateSnapshotResult {
+  async createSnapshot(options: CreateSnapshotOptions): Promise<CreateSnapshotResult> {
     this.ensureInitialized();
     
     const config = this.getConfig();
-    const db = this.getDb();
+    const db = await this.getDb();
     
     // Get all tracked files
     const files = getTrackedFiles(this.workDir, config);
@@ -133,8 +135,8 @@ export class PersonaHubEngine {
     return hashContent(content);
   }
 
-  hasChanges(): boolean {
-    const db = this.getDb();
+  async hasChanges(): Promise<boolean> {
+    const db = await this.getDb();
     const latest = db.getLatestSnapshot();
     
     if (!latest) return true;
@@ -146,9 +148,9 @@ export class PersonaHubEngine {
     return currentHash !== latest.hash;
   }
 
-  listSnapshots(limit?: number): Snapshot[] {
+  async listSnapshots(limit?: number): Promise<Snapshot[]> {
     this.ensureInitialized();
-    const db = this.getDb();
+    const db = await this.getDb();
     const rows = db.getSnapshots(limit);
     
     return rows.map(row => ({
@@ -163,9 +165,9 @@ export class PersonaHubEngine {
     }));
   }
 
-  getSnapshot(id: number): Snapshot | null {
+  async getSnapshot(id: number): Promise<Snapshot | null> {
     this.ensureInitialized();
-    const db = this.getDb();
+    const db = await this.getDb();
     const row = db.getSnapshotById(id);
     
     if (!row) return null;
@@ -182,9 +184,9 @@ export class PersonaHubEngine {
     };
   }
 
-  diff(snapshotId: number, compareToId: number | null = null): DiffResult {
+  async diff(snapshotId: number, compareToId: number | null = null): Promise<DiffResult> {
     this.ensureInitialized();
-    const db = this.getDb();
+    const db = await this.getDb();
     
     const snapshot = db.getSnapshotById(snapshotId);
     if (!snapshot) {
@@ -252,9 +254,9 @@ export class PersonaHubEngine {
     return fs.readFileSync(fullPath, 'utf-8');
   }
 
-  getRestorePreview(snapshotId: number): RestorePreview {
+  async getRestorePreview(snapshotId: number): Promise<RestorePreview> {
     this.ensureInitialized();
-    const db = this.getDb();
+    const db = await this.getDb();
     
     const snapshot = db.getSnapshotById(snapshotId);
     if (!snapshot) {
@@ -289,9 +291,9 @@ export class PersonaHubEngine {
     return { overwrite, remove, restore };
   }
 
-  restore(snapshotId: number): RestoreResult {
+  async restore(snapshotId: number): Promise<RestoreResult> {
     this.ensureInitialized();
-    const db = this.getDb();
+    const db = await this.getDb();
     
     const snapshot = db.getSnapshotById(snapshotId);
     if (!snapshot) {
@@ -299,7 +301,7 @@ export class PersonaHubEngine {
     }
     
     // CRITICAL: Create backup FIRST
-    const backup = this.createSnapshot({
+    const backup = await this.createSnapshot({
       message: `Backup before restore to #${snapshotId}`,
       isAuto: false,
       isRestoreBackup: true
